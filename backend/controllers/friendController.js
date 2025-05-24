@@ -1,0 +1,79 @@
+import db from "../db.js";
+
+// Arkadaşlık isteği gönderme
+export const sendFriendRequest = async (req, res) => {
+  const requesterId = req.user.id;
+  const { receiverId } = req.body;
+
+  try {
+    // Aynı istek veya arkadaşlık var mı?
+    const [existing] = await db.execute(
+      `SELECT * FROM friends WHERE 
+       (requester_id = ? AND receiver_id = ?) OR 
+       (requester_id = ? AND receiver_id = ?)`,
+      [requesterId, receiverId, receiverId, requesterId]
+    );
+
+    if (existing.length > 0) {
+      return res.status(400).json({
+        message: "Zaten istek gönderilmiş veya arkadaşsınız.",
+      });
+    }
+
+    await db.execute(
+      `INSERT INTO friends (requester_id, receiver_id, status) VALUES (?, ?, 'pending')`,
+      [requesterId, receiverId]
+    );
+
+    res.status(201).json({ message: "İstek gönderildi." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "İstek gönderilirken hata oluştu." });
+  }
+};
+
+// Arkadaşlık isteğini kabul etme
+export const acceptFriendRequest = async (req, res) => {
+  const receiverId = req.user.id;
+  const { requesterId } = req.body;
+
+  try {
+    const [result] = await db.execute(
+      `UPDATE friends SET status = 'accepted' 
+       WHERE requester_id = ? AND receiver_id = ? AND status = 'pending'`,
+      [requesterId, receiverId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Bekleyen istek bulunamadı." });
+    }
+
+    res.json({ message: "Arkadaşlık isteği kabul edildi." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "İstek kabul edilirken hata oluştu." });
+  }
+};
+
+// Arkadaş listesini getirme
+export const getFriends = async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const [results] = await db.execute(
+      `SELECT u.id, u.username
+         FROM users u
+         JOIN friends f ON (
+           (f.requester_id = ? AND f.receiver_id = u.id)
+           OR (f.receiver_id = ? AND f.requester_id = u.id)
+         )
+         WHERE f.status = 'accepted'`,
+      [userId, userId]
+    );
+
+    res.status(200).json(results);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Arkadaşlar alınırken hata oluştu." });
+  }
+};
