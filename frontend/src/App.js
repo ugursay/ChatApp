@@ -1,15 +1,20 @@
+// src/App.js
 import "./App.css";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import User from "./pages/User";
+import Friends from "./pages/Friends";
+import VerifyEmail from "./pages/VerifyEmail"; // Yeni ekledik
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
 } from "react-router-dom";
-import User from "./pages/User";
+import ProtectedRoute from "./components/ProtectedRoute";
+import { AuthProvider } from "./context/AuthContext"; // AuthProvider artık sadece index.js'te import edilecek
 
 function App() {
   return (
@@ -20,13 +25,40 @@ function App() {
             <Route path="/" element={<Navigate to="/login" />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/User" element={<User />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
+            <Route path="/verify/:token" element={<VerifyEmail />} />{" "}
+            {/* Yeni rota */}
+            {/* Korumalı Rotalar */}
+            <Route
+              path="/User"
+              element={
+                <ProtectedRoute>
+                  <User />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/friends"
+              element={
+                <ProtectedRoute>
+                  <Friends />
+                </ProtectedRoute>
+              }
+            />
+            {/* PendingRequests artık Friends component'i içinde yönetiliyor, ayrı bir rota gerekmiyor */}
+            {/* <Route
+              path="/pending-requests"
+              element={
+                <ProtectedRoute>
+                  <PendingRequests />
+                </ProtectedRoute>
+              }
+            /> */}
           </Routes>
         </main>
 
-        <footer className="text-center text-sm py-4 text-gray-500">
+        <footer className="text-center text-sm py-4 text-gray-500 mt-auto">
           © {new Date().getFullYear()} BookNook
         </footer>
       </div>

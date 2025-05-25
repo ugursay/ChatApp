@@ -1,27 +1,21 @@
-import { useContext, useEffect } from "react";
-import { AuthContext } from "../context/AuthContext";
+// src/pages/User.js
+import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext"; // Bu satırı kaldırdık
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const User = () => {
-  const { user, logout, loading } = useContext(AuthContext);
+  const { user, logout } = useContext(AuthContext); // AuthContext doğrudan erişilebilir
   const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate("/login");
-    }
-  }, [user, loading, navigate]);
-
-  if (!user)
-    return (
-      <p className="text-center mt-10 text-blue-600 animate-pulse">
-        Yükleniyor...
-      </p>
-    );
 
   const handleLogout = () => {
     logout();
+    toast.info("Başarıyla çıkış yaptınız.");
     navigate("/login");
+  };
+
+  const handleFriends = () => {
+    navigate("/friends");
   };
 
   return (
@@ -29,15 +23,25 @@ const User = () => {
       <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-sm hover:scale-105 transition-transform duration-300 will-change-transform">
         <h1 className="text-xl font-semibold text-center mb-4 hover:scale-105 transition-transform duration-300 will-change-transform">
           Hoş geldin<br></br>
-          <span className="text-blue-600 break-all">{user?.email}</span>
+          <span className="text-blue-600 break-all">
+            {user?.username || user?.email}
+          </span>
         </h1>
 
-        <button
-          onClick={handleLogout}
-          className="w-full bg-red-500 text-white font-semibold py-2 rounded-lg  hover:bg-red-600 transition-colors hover:scale-105 transition-transform duration-300 will-change-transform"
-        >
-          Çıkış yap
-        </button>
+        <div className="space-y-2">
+          <button
+            onClick={handleFriends}
+            className="w-full bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 transition-colors hover:scale-105 transition-transform duration-300 will-change-transform"
+          >
+            Arkadaşlık Yönetimi
+          </button>
+          <button
+            onClick={handleLogout}
+            className="w-full bg-red-500 text-white font-semibold py-2 rounded-lg hover:bg-red-600 transition-colors hover:scale-105 transition-transform duration-300 will-change-transform"
+          >
+            Çıkış Yap
+          </button>
+        </div>
       </div>
     </div>
   );

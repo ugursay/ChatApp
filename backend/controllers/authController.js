@@ -51,33 +51,34 @@ export const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const [rows] = await db.execute("SELECT * FROM users WHERE email=?", [
+    const [rows] = await db.execute("SELECT * FROM users WHERE email = ?", [
       email,
     ]);
-
-    if (rows.length === 0) {
-      return res
-        .status(400)
-        .json({ message: "Bu email ile kayıtlı kullanıcı bulunamadı." });
-    }
-
     const user = rows[0];
 
-    if (!user.isVerified) {
-      return res
-        .status(403)
-        .json({ message: "lütfen önce emalinizi doğrulayın" });
+    if (!user) {
+      return res.status(400).json({ message: "Geçersiz kimlik bilgileri." });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: "şifre yanlış" });
-    }
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
-    });
 
-    res.json({ message: "Giriş başarılı", token });
+    if (!isMatch) {
+      return res.status(400).json({ message: "Geçersiz kimlik bilgileri." });
+    }
+
+    // Token oluştururken username ve email'i de payload'a ekle
+    const token = jwt.sign(
+      { id: user.id, email: user.email, username: user.username }, // username ve email eklendi
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    res.json({
+      message: "Giriş başarılı",
+      token,
+      userId: user.id, // Frontend'e doğrudan userId gönderiyoruz
+      username: user.username, // Frontend'e doğrudan username gönderiyoruz
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Sunucu hatası." });

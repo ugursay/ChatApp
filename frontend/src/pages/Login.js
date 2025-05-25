@@ -1,18 +1,20 @@
+// src/pages/Login.js
 import { useState } from "react";
 import axios from "axios";
 import { useContext } from "react";
-import { AuthContext } from "../context/AuthContext";
+import { AuthContext } from "../context/AuthContext"; // Bu satırı kaldırdık
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { jwtDecode } from "jwt-decode";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const { login } = useContext(AuthContext);
+  const { login } = useContext(AuthContext); // AuthContext doğrudan erişilebilir
 
   const navigate = useNavigate();
 
@@ -30,11 +32,22 @@ const Login = () => {
       });
 
       toast.success(res.data.message);
-      login({ email, token: res.data.token });
+
+      const token = res.data.token;
+      const decodedToken = jwtDecode(token);
+
+      // AuthContext'e userId, email, username ve token'ı birlikte gönder
+      login({
+        id: decodedToken.id, // Token içinden alınan ID
+        email: decodedToken.email, // Token içinden alınan email
+        username: decodedToken.username, // Token içinden alınan username
+        token: token,
+      });
+
       setEmail("");
       setPassword("");
       setTimeout(() => {
-        navigate("/user");
+        navigate("/friends"); // Direkt arkadaşlık sayfasına yönlendirme veya User paneline
       }, 1500);
     } catch (err) {
       toast.error(

@@ -77,3 +77,25 @@ export const getFriends = async (req, res) => {
     res.status(500).json({ message: "Arkadaşlar alınırken hata oluştu." });
   }
 };
+
+// Bekleyen arkadaşlık isteklerini getirme
+export const getPendingRequests = async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const [results] = await db.execute(
+      `SELECT u.id, u.username
+       FROM users u
+       JOIN friends f ON f.requester_id = u.id
+       WHERE f.receiver_id = ? AND f.status = 'pending'`,
+      [userId]
+    );
+
+    res.status(200).json(results);
+  } catch (err) {
+    console.error(err);
+    res
+      .status(500)
+      .json({ message: "Bekleyen istekler alınırken hata oluştu." });
+  }
+};

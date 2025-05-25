@@ -1,27 +1,50 @@
+// src/context/AuthContext.js
 import { createContext, useState, useEffect } from "react";
+import { jwtDecode } from "jwt-decode"; // npm install jwt-decode
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null); // { id, email, token, username }
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("user");
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const decodedToken = jwtDecode(token);
+        // Token süresi doldu mu kontrolü
+        if (decodedToken.exp * 1000 < Date.now()) {
+          console.log("Token süresi dolmuş, çıkış yapılıyor.");
+          localStorage.removeItem("token");
+          setUser(null);
+        } else {
+          // Token geçerli ise, kullanıcı bilgilerini set et
+          setUser({
+            id: decodedToken.id,
+            email: decodedToken.email,
+            username: decodedToken.username,
+            token: token,
+          });
+        }
+      } catch (error) {
+        console.error("JWT token çözme hatası:", error);
+        localStorage.removeItem("token");
+        setUser(null);
+      }
     }
     setLoading(false);
   }, []);
 
   const login = (userData) => {
+    // userData bekleniyor: { id, email, username, token }
     setUser(userData);
-    localStorage.setItem("user", JSON.stringify(userData));
+    localStorage.setItem("token", userData.token); // Sadece token'ı saklamak daha güvenli
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("user");
+    localStorage.removeItem("token");
   };
 
   return (
