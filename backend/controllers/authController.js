@@ -31,7 +31,7 @@ export const registerUser = async (req, res) => {
       { id: userId, email },
       process.env.JWT_SECRET,
       {
-        expiresIn: "1h",
+        expiresIn: "1h", // 1 saat oturum süresi
       }
     );
 

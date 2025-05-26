@@ -8,27 +8,27 @@ const User = () => {
   const { user, logout } = useContext(AuthContext); // AuthContext doğrudan erişilebilir
   const navigate = useNavigate();
 
+  const handleFriends = () => {
+    navigate("/friends");
+  };
+
   const handleLogout = () => {
     logout();
     toast.info("Başarıyla çıkış yaptınız.");
     navigate("/login");
   };
 
-  const handleFriends = () => {
-    navigate("/friends");
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-sm hover:scale-105 transition-transform duration-300 will-change-transform">
-        <h1 className="text-xl font-semibold text-center mb-4 hover:scale-105 transition-transform duration-300 will-change-transform">
+      <div className="bg-white p-14  rounded-xl shadow-md w-full max-w-sm hover:scale-105 transition-transform duration-300 will-change-transform">
+        <h1 className="text-xl font-semibold text-center mb-10 hover:scale-105 transition-transform duration-300 will-change-transform">
           Hoş geldin<br></br>
           <span className="text-blue-600 break-all">
             {user?.username || user?.email}
           </span>
         </h1>
 
-        <div className="space-y-2">
+        <div className="space-y-4">
           <button
             onClick={handleFriends}
             className="w-full bg-blue-500 text-white font-semibold py-2 rounded-lg hover:bg-blue-600 transition-colors hover:scale-105 transition-transform duration-300 will-change-transform"

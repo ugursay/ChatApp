@@ -13,7 +13,7 @@ export const sendVerificaitionEmail = async (email, token) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
-    subject: "Email Verification - SimpleAuth",
+    subject: "Email Verification - SimpleAuthV2 Chat App",
     html: `<p>Please Click the link below to verify your email:</p><a href="${link}">${link}</a>`,
   };
 

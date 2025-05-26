@@ -47,7 +47,7 @@ const Login = () => {
       setEmail("");
       setPassword("");
       setTimeout(() => {
-        navigate("/friends"); // Direkt arkadaşlık sayfasına yönlendirme veya User paneline
+        navigate("/user"); // Direkt arkadaşlık sayfasına yönlendirme veya User paneline
       }, 1500);
     } catch (err) {
       toast.error(
