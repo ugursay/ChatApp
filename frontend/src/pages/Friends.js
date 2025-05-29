@@ -1,5 +1,5 @@
 // src/pages/Friends.js
-import { useState, useEffect, useContext, useCallback } from "react"; // <-- useCallback'i import edin
+import { useState, useEffect, useContext, useCallback } from "react";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -13,12 +13,12 @@ const Friends = () => {
   const [allUsers, setAllUsers] = useState([]);
   const [friends, setFriends] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
+  const [outgoingRequests, setOutgoingRequests] = useState([]); // <-- DÜZELTİLDİ: setOutgoingRequests
   const [loading, setLoading] = useState(false);
 
   const token = user?.token;
   const currentUserId = user?.id;
 
-  // fetchData fonksiyonunu useCallback ile sarmalayın
   const fetchData = useCallback(async () => {
     if (!token || !currentUserId) return;
 
@@ -41,6 +41,14 @@ const Friends = () => {
         }
       );
       setPendingRequests(pendingRes.data);
+
+      const outgoingRes = await axios.get(
+        "http://localhost:5000/api/friends/outgoing-requests",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      setOutgoingRequests(outgoingRes.data); // <-- DÜZELTİLDİ: setOutgoingRequests
     } catch (err) {
       toast.error("Veriler alınırken bir hata oluştu.");
       console.error(err);
@@ -53,12 +61,13 @@ const Friends = () => {
     setAllUsers,
     setFriends,
     setPendingRequests,
+    setOutgoingRequests, // Düzeltilmiş isme uygun
     setLoading,
-  ]); // <-- fetchData'nın kendi bağımlılıkları
+  ]);
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]); // <-- useEffect'in bağımlılık dizisine fetchData'yı ekleyin
+  }, [fetchData]);
 
   const sendRequest = async (receiverId) => {
     setLoading(true);
@@ -71,7 +80,16 @@ const Friends = () => {
         }
       );
       toast.success(res.data.message);
-      await fetchData(); // Verileri yeniden çek
+
+      setAllUsers((prevUsers) => prevUsers.filter((u) => u.id !== receiverId));
+
+      const userToSend = allUsers.find((u) => u.id === receiverId);
+
+      if (userToSend) {
+        setOutgoingRequests((prevOutgoing) => [...prevOutgoing, userToSend]);
+      }
+
+      await fetchData();
     } catch (err) {
       toast.error(err.response?.data?.message || "İstek gönderilemedi.");
     } finally {
@@ -90,9 +108,41 @@ const Friends = () => {
         }
       );
       toast.success(res.data.message);
-      await fetchData(); // Verileri yeniden çek
+
+      setPendingRequests((prevPending) =>
+        prevPending.filter((req) => req.id === requesterId)
+      );
+      const newFriend = pendingRequests.find((req) => req.id === requesterId);
+
+      if (newFriend) {
+        setFriends((prevFriends) => [...prevFriends, newFriend]);
+      }
+
+      await fetchData();
     } catch (err) {
       toast.error(err.response?.data?.message || "İstek kabul edilemedi.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUnfriend = async (friendId) => {
+    setLoading(true);
+    try {
+      const res = await axios.delete(
+        "http://localhost:5000/api/friends/unfriend",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          data: { friendId },
+        }
+      );
+      toast.success(res.data.message);
+
+      setFriends((prevFriends) => prevFriends.filter((f) => f.id !== friendId));
+
+      await fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Arkadaş çıkarılamadı.");
     } finally {
       setLoading(false);
     }
@@ -101,12 +151,14 @@ const Friends = () => {
   const getConnectableUsers = () => {
     const friendIds = new Set(friends.map((f) => f.id));
     const pendingRequesterIds = new Set(pendingRequests.map((req) => req.id));
+    const outgoingReceiverIds = new Set(outgoingRequests.map((req) => req.id)); // <-- outgoingRequests doğru kullanıldı
 
     return allUsers.filter(
       (u) =>
         u.id !== currentUserId &&
         !friendIds.has(u.id) &&
-        !pendingRequesterIds.has(u.id)
+        !pendingRequesterIds.has(u.id) &&
+        !outgoingReceiverIds.has(u.id)
     );
   };
 
@@ -133,15 +185,16 @@ const Friends = () => {
               {getConnectableUsers().map((userItem) => (
                 <li
                   key={userItem.id}
-                  className="flex items-center justify-between gap-4 bg-blue-50 px-5 py-2 rounded-md shadow-sm border border-blue-100 w-fit mx-auto"
+                  className="flex items-center justify-between bg-gray-200 px-5 py-2 hover:scale-105 transition-transform duration-300 will-change-transform bg-gray-200 bg-opacity-60 rounded-xl w-full max-w-md mx-auto"
                 >
-                  <span className="font-medium text-blue-800">
+                  <span className="flex-grow min-w-0 truncate">
                     {userItem.username}
-                  </span>
+                  </span>{" "}
+                  {/* İYİLEŞTİRME: Taşmayı önlemek için eklendi */}
                   <button
                     onClick={() => sendRequest(userItem.id)}
                     disabled={loading}
-                    className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 disabled:bg-blue-300 transition-colors duration-200"
+                    className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 disabled:bg-blue-300 transition-colors duration-200 flex-shrink-0" /* İYİLEŞTİRME: Butonun küçülmemesi için eklendi */
                   >
                     İstek Gönder
                   </button>
@@ -169,13 +222,15 @@ const Friends = () => {
                   key={req.id}
                   className="flex items-center justify-between gap-4 bg-yellow-50 px-5 py-2 rounded-md shadow-sm border border-yellow-100 w-fit mx-auto"
                 >
-                  <span className="font-medium text-yellow-800">
+                  <span className="font-medium text-yellow-800 flex-grow min-w-0 truncate">
+                    {" "}
+                    {/* İYİLEŞTİRME: Taşmayı önlemek için eklendi */}
                     {req.username}
                   </span>
                   <button
                     onClick={() => acceptRequest(req.id)}
                     disabled={loading}
-                    className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 disabled:bg-green-300 transition-colors duration-200"
+                    className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 disabled:bg-green-300 transition-colors duration-200 flex-shrink-0" /* İYİLEŞTİRME: Butonun küçülmemesi için eklendi */
                   >
                     Kabul Et
                   </button>
@@ -201,9 +256,22 @@ const Friends = () => {
               {friends.map((friend) => (
                 <li
                   key={friend.id}
-                  className="text-gray-700 font-medium bg-green-50 px-6 py-2 rounded-md shadow-sm border border-green-100 w-fit mx-auto hover:scale-95 transition-transform duration-300 will-change-transform"
+                  className="flex items-center justify-between bg-gray-200 px-5 py-2 hover:scale-105 transition-transform duration-300 will-change-transform bg-gray-200 bg-opacity-60 rounded-xl w-full max-w-md mx-auto"
                 >
-                  {friend.username}
+                  <span className="flex-grow min-w-0 truncate">
+                    {" "}
+                    {/* İYİLEŞTİRME: Taşmayı önlemek için eklendi */}
+                    {friend.username}
+                  </span>
+                  <button
+                    onClick={() => {
+                      handleUnfriend(friend.id);
+                    }}
+                    disabled={loading}
+                    className="bg-red-400 ml-5 text-white px-3 py-1 rounded hover:bg-red-600 disabled:bg-red-200 transition-colors duration-300 will-change-transform flex-shrink-0" /* İYİLEŞTİRME: Butonun küçülmemesi için eklendi */
+                  >
+                    Çıkar
+                  </button>
                 </li>
               ))}
             </ul>

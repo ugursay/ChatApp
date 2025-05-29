@@ -99,3 +99,49 @@ export const getPendingRequests = async (req, res) => {
       .json({ message: "Bekleyen istekler alınırken hata oluştu." });
   }
 };
+
+// Arkadaş çıkarma
+export const unfriend = async (req, res) => {
+  const userId = req.user.id; // Token'dan gelen mevcut kullanıcının ID'si
+  const { friendId } = req.body; // Çıkarılacak arkadaşın ID'si
+
+  try {
+    // İki kullanıcı arasındaki arkadaşlık ilişkisini bul
+    // Hem requester_id hem de receiver_id'yi kontrol etmeliyiz
+    const [result] = await db.execute(
+      `DELETE FROM friends
+       WHERE ((requester_id = ? AND receiver_id = ?) OR (requester_id = ? AND receiver_id = ?))
+       AND status = 'accepted'`, // Sadece 'accepted' durumundaki arkadaşlıkları sil
+      [userId, friendId, friendId, userId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res
+        .status(404)
+        .json({ message: "Arkadaş bulunamadı veya arkadaş değilsiniz." });
+    }
+
+    res.status(200).json({ message: "Arkadaş başarıyla silindi." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Arkadaş silinirken bir hata oluştu." });
+  }
+};
+
+export const getOutgoingRequests = async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const [results] = await db.execute(
+      `SELECT u.id, u.username
+       FROM users u
+       JOIN friends f ON f.receiver_id = u.id
+       WHERE f.requester_id = ? AND f.status = 'pending'`,
+      [userId]
+    );
+    res.status(200).json(results);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Giden istekler alınırken hata oluştu." });
+  }
+};
